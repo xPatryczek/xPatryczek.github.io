@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kalkulator Lab 1: Pomiary Elektryczne</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.6; max-width: 800px; margin: 0 auto; padding: 20px; background-color: #f4f4f9; color: #333; }
+        h1 { text-align: center; color: #2c3e50; border-bottom: 2px solid #2c3e50; padding-bottom: 10px; }
+        h2 { color: #2980b9; margin-top: 30px; border-left: 5px solid #2980b9; padding-left: 10px; }
+        .card { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); margin-bottom: 20px; }
+        .input-group { margin-bottom: 15px; }
+        label { display: block; font-weight: bold; margin-bottom: 5px; }
+        input[type="number"] { width: 100%; padding: 8px; box-sizing: border-box; border: 1px solid #ccc; border-radius: 4px; }
+        button { background-color: #27ae60; color: white; border: none; padding: 10px 20px; text-transform: uppercase; font-weight: bold; cursor: pointer; border-radius: 4px; width: 100%; margin-top: 10px; }
+        button:hover { background-color: #219150; }
+        .result { margin-top: 15px; padding: 15px; background-color: #e8f6f3; border: 1px solid #a3e4d7; border-radius: 4px; font-weight: bold; }
+        .note { font-size: 0.9em; color: #666; font-style: italic; margin-top: 5px; }
+        .warning { color: #c0392b; font-weight: bold; }
+    </style>
+</head>
+<body>
+
+    <h1>Kalkulator Laboratorium nr 1</h1>
+    <p class="note">Narzędzie wspomagające obliczenia do instrukcji "Pomiar podstawowych wielkości elektrycznych".</p>
+
+    <div class="card">
+        <h2>1. Opór Zastępczy (Teoria)</h2>
+        <p class="note">Dotyczy punktów V i VII instrukcji. Wpisz zmierzone wartości R1 i R2.</p>
+        
+        <div class="input-group">
+            <label for="r1">Rezystancja R1 (Ω):</label>
+            <input type="number" id="r1" placeholder="np. 1000">
+        </div>
+        <div class="input-group">
+            <label for="r2">Rezystancja R2 (Ω):</label>
+            <input type="number" id="r2" placeholder="np. 500">
+        </div>
+        <button onclick="calcResistors()">Oblicz Rz (Szeregowo i Równolegle)</button>
+        
+        <div id="resResult" class="result" style="display:none;"></div>
+    </div>
+
+    <div class="card">
+        <h2>2. Prąd Maksymalny (Bezpieczeństwo)</h2>
+        <p class="note">Dotyczy punktu I w "Część Druga". Służy do doboru zakresu amperomierza.</p>
+        
+        <div class="input-group">
+            <label for="u_max">Napięcie zasilacza U (V):</label>
+            <input type="number" id="u_max" value="30">
+        </div>
+        <div class="input-group">
+            <label for="r_protect">Opornik zabezpieczający (Ω):</label>
+            <input type="number" id="r_protect" value="2000">
+            <span class="note">Instrukcja sugeruje R = 2 kΩ (2000 Ω). Zakładamy R_nieznane = 0.</span>
+        </div>
+        <button onclick="calcMaxCurrent()">Oblicz I max</button>
+        
+        <div id="currentResult" class="result" style="display:none;"></div>
+    </div>
+
+    <div class="card">
+        <h2>3. Wyznaczanie R z Prawa Ohma</h2>
+        <p class="note">Dotyczy punktu VIII "Część Druga". Oblicz R na podstawie pomiarów U i I.</p>
+        
+        <div class="input-group">
+            <label for="u_meas">Zmierzone Napięcie U (V):</label>
+            <input type="number" id="u_meas" step="0.01">
+        </div>
+        <div class="input-group">
+            <label for="i_meas">Zmierzone Natężenie I (A):</label>
+            <input type="number" id="i_meas" step="0.0001" placeholder="Uwaga: wpisz w Amperach! (np. 0.015)">
+            <span class="note">Jeśli masz wynik w mA, podziel go przez 1000 (np. 20 mA = 0.02 A).</span>
+        </div>
+        <button onclick="calcOhm()">Oblicz Rezystancję R</button>
+        
+        <div id="ohmResult" class="result" style="display:none;"></div>
+    </div>
+
+    <div class="card">
+        <h2>4. Mostek Wheatstone'a (Alternatywa)</h2>
+        <p class="note">Dotyczy wzoru: X = R * (R1 / R2)</p>
+        
+        <div class="input-group">
+            <label for="w_r">Rezystor dekadowy R (Ω):</label>
+            <input type="number" id="w_r">
+        </div>
+        <div class="input-group">
+            <label for="w_r1">Ramię R1 (lub długość l1):</label>
+            <input type="number" id="w_r1">
+        </div>
+        <div class="input-group">
+            <label for="w_r2">Ramię R2 (lub długość l2):</label>
+            <input type="number" id="w_r2">
+        </div>
+        <button onclick="calcBridge()">Oblicz Nieznane X</button>
+        
+        <div id="bridgeResult" class="result" style="display:none;"></div>
+    </div>
+
+    <script>
+        // Funkcja 1: Opory zastępcze
+        function calcResistors() {
+            const r1 = parseFloat(document.getElementById('r1').value);
+            const r2 = parseFloat(document.getElementById('r2').value);
+            const resBox = document.getElementById('resResult');
+
+            if (isNaN(r1) || isNaN(r2)) {
+                resBox.style.display = 'block';
+                resBox.innerHTML = "Wpisz poprawne wartości R1 i R2.";
+                return;
+            }
+
+            // Szeregowo: Rz = R1 + R2 [źródło: 19]
+            const r_series = r1 + r2;
+            
+            // Równolegle: Rz = (R1*R2)/(R1+R2) [źródło: 23]
+            const r_parallel = (r1 * r2) / (r1 + r2);
+
+            resBox.style.display = 'block';
+            resBox.innerHTML = `
+                <strong>Połączenie Szeregowe:</strong> ${r_series.toFixed(2)} Ω<br>
+                <strong>Połączenie Równoległe:</strong> ${r_parallel.toFixed(2)} Ω
+            `;
+        }
+
+        // Funkcja 2: Prąd maksymalny
+        function calcMaxCurrent() {
+            const u = parseFloat(document.getElementById('u_max').value);
+            const r = parseFloat(document.getElementById('r_protect').value);
+            const curBox = document.getElementById('currentResult');
+
+            if (isNaN(u) || isNaN(r) || r === 0) {
+                curBox.style.display = 'block';
+                curBox.innerHTML = "Wpisz poprawne dane (R nie może być 0).";
+                return;
+            }
+
+            // I = U / R [źródło: 31, 32]
+            const i_amp = u / r;
+            const i_mamp = i_amp * 1000;
+
+            curBox.style.display = 'block';
+            curBox.innerHTML = `
+                Maksymalny prąd w układzie: <strong>${i_amp.toFixed(4)} A</strong><br>
+                Czyli: <strong>${i_mamp.toFixed(2)} mA</strong><br>
+                <span class="warning">Ustaw zakres amperomierza większy niż ta wartość!</span>
+            `;
+        }
+
+        // Funkcja 3: Prawo Ohma (wyznaczanie R)
+        function calcOhm() {
+            const u = parseFloat(document.getElementById('u_meas').value);
+            const i = parseFloat(document.getElementById('i_meas').value);
+            const ohmBox = document.getElementById('ohmResult');
+
+            if (isNaN(u) || isNaN(i) || i === 0) {
+                ohmBox.style.display = 'block';
+                ohmBox.innerHTML = "Wpisz poprawne dane (I nie może być 0).";
+                return;
+            }
+
+            // R = U / I [źródło: 52]
+            const r = u / i;
+
+            ohmBox.style.display = 'block';
+            ohmBox.innerHTML = `
+                Wyliczony opór R: <strong>${r.toFixed(2)} Ω</strong><br>
+                (${ (r/1000).toFixed(3) } kΩ)
+            `;
+        }
+
+        // Funkcja 4: Mostek Wheatstone'a
+        function calcBridge() {
+            const r = parseFloat(document.getElementById('w_r').value);
+            const r1 = parseFloat(document.getElementById('w_r1').value);
+            const r2 = parseFloat(document.getElementById('w_r2').value);
+            const bridBox = document.getElementById('bridgeResult');
+
+            if (isNaN(r) || isNaN(r1) || isNaN(r2) || r2 === 0) {
+                bridBox.style.display = 'block';
+                bridBox.innerHTML = "Wpisz poprawne dane.";
+                return;
+            }
+
+            // X = R * (R1/R2) [źródło: 107]
+            const x = r * (r1 / r2);
+
+            bridBox.style.display = 'block';
+            bridBox.innerHTML = `
+                Nieznany opór X: <strong>${x.toFixed(2)} Ω</strong>
+            `;
+        }
+    </script>
+</body>
+</html>
